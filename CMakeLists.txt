@@ -54,6 +54,8 @@ else()
 	add_definitions(-D__STDC_FORMAT_MACROS)
 endif()
 
+add_subdirectory(wvdecrypter)
+
 if(CORE_SYSTEM_NAME STREQUAL android)
   set(DECRYPTERPATH "special://xbmcbinaddons")
 else()
@@ -63,6 +65,7 @@ endif()
 add_subdirectory(lib/libbento4)
 list(APPEND DEPLIBS bento4)
 					
+set(ADP_ADDITIONAL_BINARY $<TARGET_FILE:ssd_wv>)
 build_addon(inputstream.adaptive ADP DEPLIBS)
 
 include(CPack)
