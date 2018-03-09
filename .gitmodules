@@ -1,0 +1,3 @@
+[submodule "wvdecrypter"]
+	path = wvdecrypter
+	url = https://github.com/peak3d/inputstream.adaptive.decrypter
