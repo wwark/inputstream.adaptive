@@ -50,5 +50,5 @@ If your display resolution is 720p, you will not be able to watch 1080p videos i
 [bento4 library](https://www.bento4.com/) For me the best library choice for mp4 streams. Well written and extensible!
 
 ##### Continuous integration:
-[Travis CI build state:](https://travis-ci.org/peak3d) ![alt tag](https://travis-ci.org/peak3d/inputstream.adaptive.svg?branch=master)  
-[Appveyor:](https://ci.appveyor.com/project/peak3d) ![alt tag](https://ci.appveyor.com/api/projects/status/ah9s8usgxhangq7o?svg=true)
+[Travis CI build state:](https://travis-ci.org/xbmc) ![alt tag](https://travis-ci.org/xbmc/inputstream.adaptive.svg?branch=master)  
+[Appveyor:](https://ci.appveyor.com/project/xbmc) ![alt tag](https://ci.appveyor.com/api/projects/status/ah9s8usgxhangq7o?svg=true)

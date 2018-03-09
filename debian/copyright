@@ -1,6 +1,6 @@
 Format: http://dep.debian.net/deps/dep5
 Upstream-Name: inputstream.adaptive
-Source: https://github.com/peak3d/inputstream.adaptive
+Source: https://github.com/xbmc/inputstream.adaptive
 
 Files: *
 Copyright: 2005-2016 Team Kodi

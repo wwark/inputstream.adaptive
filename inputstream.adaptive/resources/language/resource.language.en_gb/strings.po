@@ -1,7 +1,7 @@
 # Kodi Media Center language file
 # Addon Name: Inputstream.adaptive
 # Addon id: inputstream.adaptive
-# Addon Provider: peak3d
+# Addon Provider: Team Kodi
 
 msgid ""
 msgstr ""

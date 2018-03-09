@@ -1,5 +1,5 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
+ *      Copyright (C) 2005-2012 Team Kodi
  *      Copyright (C) 2015 Team KODI
  *
  *      http://kodi.tv
