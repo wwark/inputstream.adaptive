@@ -1618,7 +1618,7 @@ bool Session::initialize()
 
       if (adaptiveTree_->psshSets_[ses].pssh_ == "FILE")
       {
-        kodi::Log(ADDON_LOG_DEBUG, "Searching PSSH data in FILE");
+         xbmc->Log(ADDON::LOG_DEBUG, "Searching PSSH data in FILE");
 
         if (license_data_.empty())
         {
@@ -1742,7 +1742,7 @@ bool Session::initialize()
       {
         char hexkid[36];
         AP4_FormatHex(reinterpret_cast<const AP4_UI08*>(defkid), 16, hexkid), hexkid[32]=0;
-        kodi::Log(ADDON_LOG_DEBUG, "Initializing stream with KID: %s", hexkid);
+         xbmc->Log(ADDON::LOG_DEBUG, "Initializing stream with KID: %s", hexkid);
 
         for (unsigned int i(1); i < ses; ++i)
           if (decrypter_ && decrypter_->HasLicenseKey(cdm_sessions_[i].single_sample_decryptor_, (const uint8_t *)defkid))
@@ -1752,7 +1752,7 @@ bool Session::initialize()
           }
       }
       else if (!defkid)
-        kodi::Log(ADDON_LOG_WARNING, "Initializing stream with unknown KID!");
+         xbmc->Log(ADDON::LOG_DEBUG, "Initializing stream with unknown KID!");
 
       if (decrypter_ && init_data.GetDataSize() >= 4 && (session.single_sample_decryptor_
         || (session.single_sample_decryptor_ = decrypter_->CreateSingleSampleDecrypter(init_data, optionalKeyParameter)) != 0))
