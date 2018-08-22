@@ -2510,6 +2510,7 @@ public:
   virtual bool PosTime(int ms) override;
   virtual int GetTotalTime() override;
   virtual int GetTime() override;
+  virtual bool GetTimes(INPUTSTREAM_TIMES &times) override;
   virtual bool CanPauseStream() override;
   virtual bool CanSeekStream() override;
   virtual bool IsRealTimeStream() override;
@@ -2679,6 +2680,7 @@ void CInputStreamAdaptive::GetCapabilities(INPUTSTREAM_CAPABILITIES &caps)
   kodi::Log(ADDON_LOG_DEBUG, "GetCapabilities()");
   caps.m_mask = INPUTSTREAM_CAPABILITIES::SUPPORTS_IDEMUX |
     INPUTSTREAM_CAPABILITIES::SUPPORTS_IDISPLAYTIME |
+    INPUTSTREAM_CAPABILITIES::SUPPORTS_ITIME |
     INPUTSTREAM_CAPABILITIES::SUPPORTS_IPOSTIME |
     INPUTSTREAM_CAPABILITIES::SUPPORTS_SEEK |
     INPUTSTREAM_CAPABILITIES::SUPPORTS_PAUSE;
@@ -2972,6 +2974,17 @@ int CInputStreamAdaptive::GetTime()
 
   int timeMs = static_cast<int>(m_session->GetElapsedTimeMs());
   return timeMs;
+}
+
+bool CInputStreamAdaptive::GetTimes(INPUTSTREAM_TIMES &times)
+{
+  if (!m_session)
+    return false;
+
+  times.startTime = time(nullptr) - m_session->GetTotalTimeMs() / 1000;
+  times.ptsStart = times.ptsEnd = 0;
+  times.ptsBegin = m_session->GetTotalTimeMs() * -1000;
+  return true;
 }
 
 bool CInputStreamAdaptive::CanPauseStream(void)
