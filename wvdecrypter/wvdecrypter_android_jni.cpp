@@ -720,7 +720,11 @@ bool WV_CencSingleSampleDecrypter::SendSessionMessage(const std::vector<char> &k
       }
 
       if (fullDecode)
+      {
         blocks[2] = b64_encode(reinterpret_cast<const unsigned char*>(blocks[2].data()), blocks[2].size(), fullDecode == 'B');
+        Log(SSD_HOST::LL_ERROR,"XXX");
+        Log(SSD_HOST::LL_ERROR, blocks[2].c_str());
+      }
     }
     std::string decoded = b64_encode(reinterpret_cast<const unsigned char*>(blocks[2].data()), blocks[2].size(), false);
     host->CURLAddOption(file, SSD_HOST::OPTION_PROTOCOL, "postdata", decoded.c_str());
