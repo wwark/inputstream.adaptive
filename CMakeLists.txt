@@ -22,7 +22,8 @@ set(ADP_SOURCES
 	src/TSReader.cpp
 	src/aes_decrypter.cpp
 	src/ADTSReader.cpp
-  src/md5.cpp
+	src/md5.cpp
+	src/WebmReader.cpp
 	)
 
 set(ADP_HEADERS
@@ -41,7 +42,8 @@ set(ADP_HEADERS
 	src/log.h
 	src/aes_decrypter.h
 	src/ADTSReader.h
-  src/md5.h
+	src/md5.h
+	src/WebmReader.h
 	)
 
 if(WIN32)
