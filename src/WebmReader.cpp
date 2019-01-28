@@ -85,6 +85,13 @@ WebmReader::WebmReader(AP4_ByteStream *stream)
 {
 }
 
+void WebmReader::GetCuePoints(std::vector<CUEPOINT> &cuepoints)
+{
+  m_cuePoints = &cuepoints;
+  m_reader->Reset();
+  m_reader->Run(this);
+}
+
 bool WebmReader::Initialize()
 {
   return m_reader->Run(this).ok() && m_framePresent;
@@ -101,7 +108,7 @@ void WebmReader::Reset(bool resetPackets)
   m_framePresent = false;
 }
 
-bool WebmReader::StartStreaming(AP4_UI32 typeMask)
+bool WebmReader::StartStreaming()
 {
   return false;
 }
@@ -128,6 +135,40 @@ bool WebmReader::ReadPacket(bool scanStreamInfo)
     return true;
   }
   return false;
+}
+
+webm::Status WebmReader::OnElementBegin(const webm::ElementMetadata& metadata, webm::Action* action)
+{
+  switch (metadata.id) {
+  case webm::Id::kCues:
+    if (m_cuePoints)
+      *action = webm::Action::kRead;
+    break;
+  }
+  return webm::Status(webm::Status::kOkCompleted);
+}
+
+webm::Status WebmReader::OnCuePoint(const webm::ElementMetadata& metadata, const webm::CuePoint& cue_point)
+{
+  if (m_cuePoints && cue_point.time.is_present()
+    && !cue_point.cue_track_positions.empty())
+  {
+    CUEPOINT cue;
+    cue.pts = cue_point.time.value();
+    cue.duration = 0;
+    cue.pos_start = cue_point.cue_track_positions[0].value().cluster_position.value();
+    cue.pos_end = ~0ULL;
+    
+    if (!m_cuePoints->empty())
+    {
+      CUEPOINT &backcue = m_cuePoints->back();
+      backcue.duration = cue.pts - backcue.pts;
+      backcue.pos_end = cue.pos_start - 1;
+    }
+    m_cuePoints->push_back(cue);
+  }
+
+  return webm::Status(webm::Status::kOkCompleted);
 }
 
 webm::Status WebmReader::OnFrame(const webm::FrameMetadata& metadata, webm::Reader* reader, std::uint64_t* bytes_remaining)
