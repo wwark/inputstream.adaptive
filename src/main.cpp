@@ -254,6 +254,7 @@ public:
   void AddReference() override {};
   void Release()override      {};
   bool waitingForSegment() const { return stream_->waitingForSegment(); }
+  void FixateInitialization(bool on) { stream_->FixateInitialization(on); }
 protected:
   // members
   adaptive::AdaptiveStream *stream_;
@@ -1781,18 +1782,20 @@ public:
     return playlistPTS > basePTS ? playlistPTS - basePTS : 0ULL;
   };
 
+  bool Initialize()
+  {
+    m_stream->FixateInitialization(true);
+    bool ret = WebmReader::Initialize();
+    WebmReader::Reset();
+    m_stream->FixateInitialization(false);
+    return ret;
+  }
+
   virtual AP4_Result Start(bool &bStarted) override
   {
     bStarted = false;
     if (m_started)
       return AP4_SUCCESS;
-
-    if (!StartStreaming())
-    {
-      m_eos = true;
-      return AP4_ERROR_CANNOT_OPEN_FILE;
-    }
-
     m_started = bStarted = true;
     return ReadSample();
   }
@@ -1829,9 +1832,6 @@ public:
 
   virtual bool TimeSeek(uint64_t pts, bool preceeding) override
   {
-    if (!StartStreaming())
-      return false;
-
     AP4_UI64 seekPos(((pts + m_ptsDiff) * 9) / 100);
     if (WebmReader::SeekTime(seekPos, preceeding))
     {
@@ -2639,12 +2639,12 @@ bool Session::SeekTime(double seekTime, unsigned int streamId, bool preceeding)
 
 void Session::OnSegmentChanged(adaptive::AdaptiveStream *stream)
 {
-  for (std::vector<STREAM*>::iterator s(streams_.begin()), e(streams_.end()); s != e; ++s)
-    if (&(*s)->stream_ == stream)
+  for (STREAM *s : streams_)
+    if (&s->stream_ == stream)
     {
-      if((*s)->reader_)
-        (*s)->reader_->SetPTSOffset((*s)->stream_.GetCurrentPTSOffset());
-      (*s)->segmentChanged = true;
+      if(s->reader_)
+        s->reader_->SetPTSOffset(s->stream_.GetCurrentPTSOffset());
+      s->segmentChanged = true;
       break;
     }
 }

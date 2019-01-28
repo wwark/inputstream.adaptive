@@ -49,18 +49,20 @@ public:
   void GetCuePoints(std::vector<CUEPOINT> &cuepoints);
   bool Initialize();
 
-  void Reset(bool resetPackets = true);
-  bool StartStreaming();
+  void Reset();
   bool SeekTime(uint64_t timeInTs, bool preceeding);
 
   bool GetInformation(INPUTSTREAM_INFO &info);
-  bool ReadPacket(bool streamInfo = false);
+  bool ReadPacket();
 
   webm::Status OnElementBegin(const webm::ElementMetadata& metadata, webm::Action* action) override;
   webm::Status OnCuePoint(const webm::ElementMetadata& metadata, const webm::CuePoint& cue_point) override;
+
+  webm::Status OnClusterBegin(const webm::ElementMetadata& metadata, const webm::Cluster& cluster, webm::Action* action) override;
+  webm::Status OnSimpleBlockBegin(const webm::ElementMetadata& metadata, const webm::SimpleBlock& simple_block, webm::Action* action) override;
   webm::Status OnFrame(const webm::FrameMetadata& metadata, webm::Reader* reader, std::uint64_t* bytes_remaining) override;
 
-  uint64_t GetDts() const { return m_dts; }
+  uint64_t GetDts() const { return m_pts; }
   uint64_t GetPts() const { return m_pts; }
   uint64_t GetDuration() const { return m_duration; }
   const AP4_Byte *GetPacketData() const { return nullptr; };
@@ -68,9 +70,9 @@ public:
 
 private:
   WebmAP4Reader *m_reader = nullptr;
-  bool m_framePresent = false;
+  bool m_needFrame = false;
   uint64_t m_pts = DVD_NOPTS_VALUE;
-  uint64_t m_dts = DVD_NOPTS_VALUE;
+  uint64_t m_ptsOffset = 0;
   uint64_t m_duration = 0;
   std::vector<CUEPOINT> *m_cuePoints = nullptr;
 };

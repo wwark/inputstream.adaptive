@@ -94,7 +94,8 @@ void WebmReader::GetCuePoints(std::vector<CUEPOINT> &cuepoints)
 
 bool WebmReader::Initialize()
 {
-  return m_reader->Run(this).ok() && m_framePresent;
+  webm::Status status = m_reader->Run(this);
+  return !status.is_parsing_error();
 }
 
 WebmReader::~WebmReader()
@@ -102,15 +103,10 @@ WebmReader::~WebmReader()
   delete m_reader, m_reader = nullptr;
 }
 
-void WebmReader::Reset(bool resetPackets)
+void WebmReader::Reset()
 {
   m_reader->Reset();
-  m_framePresent = false;
-}
-
-bool WebmReader::StartStreaming()
-{
-  return false;
+  m_needFrame = false;
 }
 
 bool WebmReader::GetInformation(INPUTSTREAM_INFO &info)
@@ -124,17 +120,12 @@ bool WebmReader::SeekTime(uint64_t timeInTs, bool preceeding)
   return false;
 }
 
-bool WebmReader::ReadPacket(bool scanStreamInfo)
+bool WebmReader::ReadPacket()
 {
-  if (m_framePresent)
-  {
-    // TODO:: Eat data
+  m_needFrame = true;
+  m_reader->Run(this);
 
-    m_framePresent = false;
-    m_reader->Run(this);
-    return true;
-  }
-  return false;
+  return !m_needFrame;
 }
 
 webm::Status WebmReader::OnElementBegin(const webm::ElementMetadata& metadata, webm::Action* action)
@@ -171,8 +162,25 @@ webm::Status WebmReader::OnCuePoint(const webm::ElementMetadata& metadata, const
   return webm::Status(webm::Status::kOkCompleted);
 }
 
+webm::Status WebmReader::OnClusterBegin(const webm::ElementMetadata& metadata, const webm::Cluster& cluster, webm::Action* action)
+{
+  m_ptsOffset = cluster.timecode.is_present() ? cluster.timecode.value() : 0;
+  *action = webm::Action::kRead;
+  return webm::Status(webm::Status::kOkCompleted);
+}
+
+webm::Status WebmReader::OnSimpleBlockBegin(const webm::ElementMetadata& metadata, const webm::SimpleBlock& simple_block, webm::Action* action)
+{
+  if (!m_needFrame)
+    return webm::Status(webm::Status::kWouldBlock);
+
+  *action = webm::Action::kRead;
+  return webm::Status(webm::Status::kOkCompleted);
+}
+
 webm::Status WebmReader::OnFrame(const webm::FrameMetadata& metadata, webm::Reader* reader, std::uint64_t* bytes_remaining)
 {
-  m_framePresent = true;
-  return webm::Status(webm::Status::kWouldBlock);
+  m_needFrame = false;
+
+  return Callback::OnFrame(metadata, reader, bytes_remaining);
 }
