@@ -310,12 +310,7 @@ bool adaptive::AdaptiveTree::download(const char* url, const std::map<std::strin
   char buf[CHUNKSIZE];
   size_t nbRead;
 
-  FILE *manifest = fopen("manifest.mpd", "wb");
-
-  while ((nbRead = file.Read(buf, CHUNKSIZE)) > 0 && ~nbRead && write_data(buf, nbRead, opaque))
-    fwrite(buf, 1, nbRead, manifest);
-
-  fclose(manifest);
+  while ((nbRead = file.Read(buf, CHUNKSIZE)) > 0 && ~nbRead && write_data(buf, nbRead, opaque));
 
   etag_ = file.GetPropertyValue(ADDON_FILE_PROPERTY_RESPONSE_HEADER, "etag");
   last_modified_ = file.GetPropertyValue(ADDON_FILE_PROPERTY_RESPONSE_HEADER, "last-modified");

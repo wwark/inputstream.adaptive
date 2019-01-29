@@ -124,7 +124,8 @@ bool WebmReader::GetInformation(INPUTSTREAM_INFO &info)
 // We assume that m_startpos is the current I-Frame position
 bool WebmReader::SeekTime(uint64_t timeInTs, bool preceeding)
 {
-  return false;
+  Reset();
+  return true;
 }
 
 bool WebmReader::ReadPacket()
@@ -156,6 +157,8 @@ webm::Status WebmReader::OnElementBegin(const webm::ElementMetadata& metadata, w
   case webm::Id::kTracks:
     *action = webm::Action::kRead;
     break;
+  default:
+    break;
   }
   return webm::Status(webm::Status::kOkCompleted);
 }
@@ -171,7 +174,7 @@ webm::Status WebmReader::OnCuePoint(const webm::ElementMetadata& metadata, const
     //Attention these byte values are relative to Segment body start!
     cue.pos_start = cue_point.cue_track_positions[0].value().cluster_position.value();
     cue.pos_end = ~0ULL;
-    
+
     if (!m_cuePoints->empty())
     {
       CUEPOINT &backcue = m_cuePoints->back();
@@ -234,36 +237,8 @@ webm::Status WebmReader::OnTrackEntry(const webm::ElementMetadata& metadata, con
     m_width = static_cast<uint32_t>(video.pixel_width.is_present() ? video.pixel_width.value() : 0);
     m_height = static_cast<uint32_t>(video.pixel_height.is_present() ? video.pixel_height.value() : 0);
 
-    if (!track_entry.codec_private.is_present() && m_width * m_height)
-    {
-
-      m_codecPrivate.SetDataSize(3);
-      m_codecPrivate.UseData()[0] = 0;
-      m_codecPrivate.UseData()[2] = 8;
-
-      uint64_t picsize = m_width * m_height;
-
-      if (picsize <= 36864)
-        m_codecPrivate.UseData()[1] = 0x10;
-      else if (picsize <= 73728)
-        m_codecPrivate.UseData()[1] = 0x11;
-      else if (picsize <= 122880)
-        m_codecPrivate.UseData()[1] = 0x20;
-      else if (picsize <= 245760)
-        m_codecPrivate.UseData()[1] = 0x21;
-      else if (picsize <= 552960)
-        m_codecPrivate.UseData()[1] = 0x30;
-      else if (picsize <= 983040)
-        m_codecPrivate.UseData()[1] = 0x31;
-      else if (picsize <= 2228224)
-        m_codecPrivate.UseData()[1] = 0x40;
-      else if (picsize <= 8912896)
-        m_codecPrivate.UseData()[1] = 0x50;
-      else if (picsize <= 35651584)
-        m_codecPrivate.UseData()[1] = 0x60;
-      else
-        m_codecPrivate.UseData()[1] = 0;
-    }
+    if (track_entry.codec_private.is_present())
+      m_codecPrivate.SetData(track_entry.codec_private.value().data(), track_entry.codec_private.value().size());
   }
   return webm::Status(webm::Status::kOkCompleted);
 }
