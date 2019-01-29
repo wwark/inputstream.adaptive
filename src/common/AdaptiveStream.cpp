@@ -269,7 +269,10 @@ bool AdaptiveStream::prepareDownload(const AdaptiveTree::Segment *seg)
       else
       {
         download_url_ = current_rep_->url_;
-        sprintf(rangebuf, "bytes=%" PRIu64 "-%" PRIu64, seg->range_begin_, seg->range_end_);
+        if (~seg->range_end_)
+          sprintf(rangebuf, "bytes=%" PRIu64 "-%" PRIu64, seg->range_begin_, seg->range_end_);
+        else
+          sprintf(rangebuf, "bytes=%" PRIu64 "-", seg->range_begin_);
         rangeHeader = rangebuf;
       }
     }
@@ -290,7 +293,10 @@ bool AdaptiveStream::prepareDownload(const AdaptiveTree::Segment *seg)
     }
     else
       download_url_ = current_rep_->url_;
-    sprintf(rangebuf, "bytes=%" PRIu64 "-%" PRIu64, seg->range_begin_, seg->range_end_);
+    if (~seg->range_end_)
+      sprintf(rangebuf, "bytes=%" PRIu64 "-%" PRIu64, seg->range_begin_, seg->range_end_);
+    else
+      sprintf(rangebuf, "bytes=%" PRIu64 "-", seg->range_begin_);
     rangeHeader = rangebuf;
   }
 

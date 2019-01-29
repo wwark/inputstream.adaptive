@@ -111,6 +111,13 @@ void WebmReader::Reset()
 
 bool WebmReader::GetInformation(INPUTSTREAM_INFO &info)
 {
+  if (!info.m_ExtraSize && m_codecPrivate.GetDataSize() > 0)
+  {
+    info.m_ExtraSize = m_codecPrivate.GetDataSize();
+    info.m_ExtraData = static_cast<const uint8_t*>(malloc(info.m_ExtraSize));
+    memcpy(const_cast<uint8_t*>(info.m_ExtraData), m_codecPrivate.GetData(), info.m_ExtraSize);
+    return true;
+  }
   return false;
 }
 
@@ -135,6 +142,12 @@ webm::Status WebmReader::OnElementBegin(const webm::ElementMetadata& metadata, w
     if (m_cuePoints)
       *action = webm::Action::kRead;
     break;
+  case webm::Id::kCluster:
+    *action = webm::Action::kRead;
+    break;
+  case webm::Id::kTracks:
+    *action = webm::Action::kRead;
+    break;
   }
   return webm::Status(webm::Status::kOkCompleted);
 }
@@ -147,7 +160,8 @@ webm::Status WebmReader::OnCuePoint(const webm::ElementMetadata& metadata, const
     CUEPOINT cue;
     cue.pts = cue_point.time.value();
     cue.duration = 0;
-    cue.pos_start = cue_point.cue_track_positions[0].value().cluster_position.value();
+    //TODO: 48 is the stream position where Segment starts, must be retrieved from initialization
+    cue.pos_start = cue_point.cue_track_positions[0].value().cluster_position.value() + 48;
     cue.pos_end = ~0ULL;
     
     if (!m_cuePoints->empty())
@@ -172,8 +186,12 @@ webm::Status WebmReader::OnClusterBegin(const webm::ElementMetadata& metadata, c
 webm::Status WebmReader::OnSimpleBlockBegin(const webm::ElementMetadata& metadata, const webm::SimpleBlock& simple_block, webm::Action* action)
 {
   if (!m_needFrame)
+  {
+    m_duration = (m_ptsOffset + simple_block.timecode) - m_pts;
     return webm::Status(webm::Status::kWouldBlock);
+  }
 
+  m_pts = m_ptsOffset + simple_block.timecode;
   *action = webm::Action::kRead;
   return webm::Status(webm::Status::kOkCompleted);
 }
@@ -182,5 +200,62 @@ webm::Status WebmReader::OnFrame(const webm::FrameMetadata& metadata, webm::Read
 {
   m_needFrame = false;
 
-  return Callback::OnFrame(metadata, reader, bytes_remaining);
+  m_frameBuffer.SetDataSize(*bytes_remaining);
+
+  if (*bytes_remaining == 0)
+    return webm::Status(webm::Status::kOkCompleted);
+
+  webm::Status status;
+  do {
+    std::uint64_t num_actually_read;
+    std::uint64_t num_read = 0;
+    status = reader->Read(*bytes_remaining, m_frameBuffer.UseData() + num_read, &num_actually_read);
+    *bytes_remaining -= num_actually_read;
+    num_read += num_actually_read;
+  } while (status.code == webm::Status::kOkPartial);
+
+  return status;
+}
+
+webm::Status WebmReader::OnTrackEntry(const webm::ElementMetadata& metadata, const webm::TrackEntry& track_entry)
+{
+  if (track_entry.video.is_present())
+  {
+    const webm::Video &video = track_entry.video.value();
+
+    m_width = static_cast<uint32_t>(video.pixel_width.is_present() ? video.pixel_width.value() : 0);
+    m_height = static_cast<uint32_t>(video.pixel_height.is_present() ? video.pixel_height.value() : 0);
+
+    if (!track_entry.codec_private.is_present() && m_width * m_height)
+    {
+
+      m_codecPrivate.SetDataSize(3);
+      m_codecPrivate.UseData()[0] = 0;
+      m_codecPrivate.UseData()[2] = 8;
+
+      uint64_t picsize = m_width * m_height;
+
+      if (picsize <= 36864)
+        m_codecPrivate.UseData()[1] = 0x10;
+      else if (picsize <= 73728)
+        m_codecPrivate.UseData()[1] = 0x11;
+      else if (picsize <= 122880)
+        m_codecPrivate.UseData()[1] = 0x20;
+      else if (picsize <= 245760)
+        m_codecPrivate.UseData()[1] = 0x21;
+      else if (picsize <= 552960)
+        m_codecPrivate.UseData()[1] = 0x30;
+      else if (picsize <= 983040)
+        m_codecPrivate.UseData()[1] = 0x31;
+      else if (picsize <= 2228224)
+        m_codecPrivate.UseData()[1] = 0x40;
+      else if (picsize <= 8912896)
+        m_codecPrivate.UseData()[1] = 0x50;
+      else if (picsize <= 35651584)
+        m_codecPrivate.UseData()[1] = 0x60;
+      else
+        m_codecPrivate.UseData()[1] = 0;
+    }
+  }
+  return webm::Status(webm::Status::kOkCompleted);
 }

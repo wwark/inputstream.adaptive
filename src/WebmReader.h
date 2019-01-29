@@ -22,6 +22,8 @@
 #include <vector>
 
 #include "Ap4Types.h"
+#include "AP4DataBuffer.h"
+
 #include <kodi/addon-instance/Inputstream.h>
 #include <TimingConstants.h>
 #include <webm/callback.h>
@@ -61,12 +63,13 @@ public:
   webm::Status OnClusterBegin(const webm::ElementMetadata& metadata, const webm::Cluster& cluster, webm::Action* action) override;
   webm::Status OnSimpleBlockBegin(const webm::ElementMetadata& metadata, const webm::SimpleBlock& simple_block, webm::Action* action) override;
   webm::Status OnFrame(const webm::FrameMetadata& metadata, webm::Reader* reader, std::uint64_t* bytes_remaining) override;
+  webm::Status OnTrackEntry(const webm::ElementMetadata& metadata, const webm::TrackEntry& track_entry);
 
   uint64_t GetDts() const { return m_pts; }
   uint64_t GetPts() const { return m_pts; }
   uint64_t GetDuration() const { return m_duration; }
-  const AP4_Byte *GetPacketData() const { return nullptr; };
-  const AP4_Size GetPacketSize() const { return 0; };
+  const AP4_Byte *GetPacketData() const { return m_frameBuffer.GetData(); };
+  const AP4_Size GetPacketSize() const { return m_frameBuffer.GetDataSize(); };
 
 private:
   WebmAP4Reader *m_reader = nullptr;
@@ -75,4 +78,9 @@ private:
   uint64_t m_ptsOffset = 0;
   uint64_t m_duration = 0;
   std::vector<CUEPOINT> *m_cuePoints = nullptr;
+  AP4_DataBuffer m_frameBuffer, m_codecPrivate;
+
+  //Video section
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
 };

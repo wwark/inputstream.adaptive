@@ -1804,8 +1804,8 @@ public:
   {
     if (ReadPacket())
     {
-      m_dts = GetDts();
-      m_pts = GetPts();
+      m_dts = GetDts() * 1000;
+      m_pts = GetPts() * 1000;
 
       if (~m_ptsOffs)
       {
@@ -1847,11 +1847,11 @@ public:
   }
 
   virtual bool GetNextFragmentInfo(uint64_t &ts, uint64_t &dur) override { return false; }
-  virtual uint32_t GetTimeScale()const override { return 90000; }
+  virtual uint32_t GetTimeScale()const override { return 1000; }
   virtual AP4_UI32 GetStreamId()const override { return m_streamId; }
   virtual AP4_Size GetSampleDataSize()const override { return GetPacketSize(); }
   virtual const AP4_Byte *GetSampleData()const override { return GetPacketData(); }
-  virtual uint64_t GetDuration()const override { return WebmReader::GetDuration(); }
+  virtual uint64_t GetDuration()const override { return WebmReader::GetDuration() *1000; }
   virtual bool IsEncrypted()const override { return false; };
 
 private:
