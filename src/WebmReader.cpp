@@ -135,6 +135,14 @@ bool WebmReader::ReadPacket()
   return !m_needFrame;
 }
 
+/********************************************************************/
+
+webm::Status WebmReader::OnSegmentBegin(const webm::ElementMetadata& metadata, webm::Action* action)
+{
+  m_cueOffset = metadata.position + metadata.header_size;
+  return webm::Status(webm::Status::kOkCompleted);
+}
+
 webm::Status WebmReader::OnElementBegin(const webm::ElementMetadata& metadata, webm::Action* action)
 {
   switch (metadata.id) {
@@ -160,8 +168,8 @@ webm::Status WebmReader::OnCuePoint(const webm::ElementMetadata& metadata, const
     CUEPOINT cue;
     cue.pts = cue_point.time.value();
     cue.duration = 0;
-    //TODO: 48 is the stream position where Segment starts, must be retrieved from initialization
-    cue.pos_start = cue_point.cue_track_positions[0].value().cluster_position.value() + 48;
+    //Attention these byte values are relative to Segment body start!
+    cue.pos_start = cue_point.cue_track_positions[0].value().cluster_position.value();
     cue.pos_end = ~0ULL;
     
     if (!m_cuePoints->empty())

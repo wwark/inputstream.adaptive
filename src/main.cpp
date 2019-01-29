@@ -255,6 +255,7 @@ public:
   void Release()override      {};
   bool waitingForSegment() const { return stream_->waitingForSegment(); }
   void FixateInitialization(bool on) { stream_->FixateInitialization(on); }
+  void SetSegmentFileOffset(uint64_t offset) { stream_->SetSegmentFileOffset(offset); }
 protected:
   // members
   adaptive::AdaptiveStream *stream_;
@@ -308,7 +309,13 @@ bool adaptive::AdaptiveTree::download(const char* url, const std::map<std::strin
   static const unsigned int CHUNKSIZE = 16384;
   char buf[CHUNKSIZE];
   size_t nbRead;
-  while ((nbRead = file.Read(buf, CHUNKSIZE)) > 0 && ~nbRead && write_data(buf, nbRead, opaque));
+
+  FILE *manifest = fopen("manifest.mpd", "wb");
+
+  while ((nbRead = file.Read(buf, CHUNKSIZE)) > 0 && ~nbRead && write_data(buf, nbRead, opaque))
+    fwrite(buf, 1, nbRead, manifest);
+
+  fclose(manifest);
 
   etag_ = file.GetPropertyValue(ADDON_FILE_PROPERTY_RESPONSE_HEADER, "etag");
   last_modified_ = file.GetPropertyValue(ADDON_FILE_PROPERTY_RESPONSE_HEADER, "last-modified");
@@ -1788,6 +1795,7 @@ public:
     bool ret = WebmReader::Initialize();
     WebmReader::Reset();
     m_stream->FixateInitialization(false);
+    m_stream->SetSegmentFileOffset(GetCueOffset());
     return ret;
   }
 
@@ -2486,7 +2494,7 @@ void Session::UpdateStream(STREAM &stream, const SSD::SSD_DECRYPTER::SSD_CAPS &c
     stream.info_.m_codecFourCC = MKTAG(rep->codecs_[0], rep->codecs_[1], rep->codecs_[2], rep->codecs_[3]);
     strcpy(stream.info_.m_codecName, "hevc");
   }
-  else if (rep->codecs_.find("vp9") == 0)
+  else if (rep->codecs_.find("vp9") == 0 || rep->codecs_.find("vp09") == 0)
     strcpy(stream.info_.m_codecName, "vp9");
   else if (rep->codecs_.find("opus") == 0)
     strcpy(stream.info_.m_codecName, "opus");

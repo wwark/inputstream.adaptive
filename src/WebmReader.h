@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "Ap4Types.h"
-#include "AP4DataBuffer.h"
+#include "Ap4DataBuffer.h"
 
 #include <kodi/addon-instance/Inputstream.h>
 #include <TimingConstants.h>
@@ -57,6 +57,8 @@ public:
   bool GetInformation(INPUTSTREAM_INFO &info);
   bool ReadPacket();
 
+  webm::Status OnSegmentBegin(const webm::ElementMetadata& metadata, webm::Action* action) override;
+
   webm::Status OnElementBegin(const webm::ElementMetadata& metadata, webm::Action* action) override;
   webm::Status OnCuePoint(const webm::ElementMetadata& metadata, const webm::CuePoint& cue_point) override;
 
@@ -68,11 +70,13 @@ public:
   uint64_t GetDts() const { return m_pts; }
   uint64_t GetPts() const { return m_pts; }
   uint64_t GetDuration() const { return m_duration; }
-  const AP4_Byte *GetPacketData() const { return m_frameBuffer.GetData(); };
-  const AP4_Size GetPacketSize() const { return m_frameBuffer.GetDataSize(); };
+  const AP4_Byte *GetPacketData() const { return m_frameBuffer.GetData(); }
+  AP4_Size GetPacketSize() const { return m_frameBuffer.GetDataSize(); }
+  uint64_t GetCueOffset()  const { return m_cueOffset; }
 
 private:
   WebmAP4Reader *m_reader = nullptr;
+  uint64_t m_cueOffset = 0;
   bool m_needFrame = false;
   uint64_t m_pts = DVD_NOPTS_VALUE;
   uint64_t m_ptsOffset = 0;
