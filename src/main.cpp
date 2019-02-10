@@ -1830,7 +1830,19 @@ public:
 
   virtual bool GetInformation(INPUTSTREAM_INFO &info) override
   {
-    return WebmReader::GetInformation(info);
+    bool ret = WebmReader::GetInformation(info);
+    // kodi supports VP9 without extrada since addon api version was introduced.
+    // For older kodi versions (without api version) we have to fake extra-data
+    if (!info.m_ExtraSize && info.m_codecName == "vp9" && kodi::addon::CAddonBase::m_strGlobalApiVersion.empty())
+    {
+      info.m_ExtraSize = 4;
+      uint8_t *annexb = static_cast<uint8_t*>(malloc(4));
+      annexb[0] = annexb[1] = annexb[2] = 0;
+      annexb[3] = 1;
+      info.m_ExtraData = annexb;
+      return true;
+    }
+    return ret;
   }
 
   virtual bool TimeSeek(uint64_t pts, bool preceeding) override
