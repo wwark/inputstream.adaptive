@@ -54,25 +54,6 @@ CDM
 ********************************************************/
 
 /*----------------------------------------------------------------------
-|   CdmDecryptedBlock implementation
-+---------------------------------------------------------------------*/
-
-class CdmDecryptedBlock : public cdm::DecryptedBlock {
-public:
-  CdmDecryptedBlock() :buffer_(0), timestamp_(0) {};
-  virtual ~CdmDecryptedBlock() {};
-
-  virtual void SetDecryptedBuffer(cdm::Buffer* buffer) override { buffer_ = buffer; };
-  virtual cdm::Buffer* DecryptedBuffer() override { return buffer_; };
-
-  virtual void SetTimestamp(int64_t timestamp) override { timestamp_ = timestamp; };
-  virtual int64_t Timestamp() const override { return timestamp_; };
-private:
-  cdm::Buffer *buffer_;
-  int64_t timestamp_;
-};
-
-/*----------------------------------------------------------------------
 |   CmdBuffer implementation
 +---------------------------------------------------------------------*/
 class CdmBuffer : public cdm::Buffer {
@@ -214,7 +195,7 @@ private:
   uint32_t promise_id_;
   bool drained_;
 
-  std::list<CdmVideoFrame> videoFrames_;
+  std::list<media::CdmVideoFrame> videoFrames_;
   std::mutex renewal_lock_;
 };
 
@@ -254,7 +235,7 @@ public:
   media::CdmAdapter *GetCdmAdapter() { return wv_adapter.get(); };
   const std::string &GetLicenseURL() { return license_url_; };
 
-  cdm::Status DecryptAndDecodeFrame(void* hostInstance, cdm::InputBuffer_2 &cdm_in, CdmVideoFrame *frame)
+  cdm::Status DecryptAndDecodeFrame(void* hostInstance, cdm::InputBuffer_2 &cdm_in, media::CdmVideoFrame *frame)
   {
     host_instance_ = hostInstance;
     cdm::Status ret = wv_adapter->DecryptAndDecodeFrame(cdm_in, frame);
@@ -1162,7 +1143,7 @@ AP4_Result WV_CencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 pool_id,
   cdm_in.subsamples = subsample_buffer_decrypt_;
 
   CdmBuffer buf((useSingleDecrypt) ? &decrypt_out_ : &data_out);
-  CdmDecryptedBlock cdm_out;
+  media::CdmDecryptedBlock cdm_out;
   cdm_out.SetDecryptedBuffer(&buf);
 
   //LICENSERENEWAL: CheckLicenseRenewal();
@@ -1258,12 +1239,12 @@ SSD_DECODE_RETVAL WV_CencSingleSampleDecrypter::DecodeVideo(void* hostInstance, 
 
     //DecryptAndDecode calls Alloc wich cals kodi VideoCodec. Set instance handle.
     //LICENSERENEWAL: CheckLicenseRenewal();
-    CdmVideoFrame frame;
+    media::CdmVideoFrame frame;
     cdm::Status ret = drm_.DecryptAndDecodeFrame(hostInstance, cdm_in, &frame);
 
     if (ret == cdm::Status::kSuccess)
     {
-      std::list<CdmVideoFrame>::iterator f(videoFrames_.begin());
+      std::list<media::CdmVideoFrame>::iterator f(videoFrames_.begin());
       while (f != videoFrames_.end() && f->Timestamp() < frame.Timestamp())++f;
       videoFrames_.insert(f, frame);
     }
@@ -1286,7 +1267,7 @@ SSD_DECODE_RETVAL WV_CencSingleSampleDecrypter::DecodeVideo(void* hostInstance, 
   {
     if (videoFrames_.size() == 4 || (videoFrames_.size() && (picture->flags & SSD_PICTURE::FLAG_DRAIN)))
     {
-      CdmVideoFrame &videoFrame_(videoFrames_.front());
+        media::CdmVideoFrame &videoFrame_(videoFrames_.front());
 
       picture->width = videoFrame_.Size().width;
       picture->height = videoFrame_.Size().height;

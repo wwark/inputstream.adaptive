@@ -13,50 +13,6 @@
 #include "api/content_decryption_module.h"
 #include "../base/cdm_config.h"
 
-
-// cdm::VideoFrame and cdm::VideoFrame_2 common implementation.
-// It has a proper implementation in wvdecryptor itself, so don't bother much here
-class CdmVideoFrame :  public cdm::VideoFrame, public cdm::VideoFrame_2
-{
-public:
-  CdmVideoFrame() :m_buffer(0) {};
-
-  void SetFormat(cdm::VideoFormat format) override { m_format = format; }
-  cdm::VideoFormat Format() const override { return m_format; }
-
-  void SetSize(cdm::Size size) override { m_size = size; }
-  cdm::Size Size() const override { return m_size; }
-
-  void SetFrameBuffer(cdm::Buffer* frame_buffer) override { m_buffer = frame_buffer; }
-  cdm::Buffer* FrameBuffer() override { return m_buffer; }
-
-  void SetPlaneOffset(cdm::VideoPlane plane, uint32_t offset) override { m_planeOffsets[plane] = offset; }
-  uint32_t PlaneOffset(cdm::VideoPlane plane) override { return m_planeOffsets[plane]; }
-
-  void SetStride(cdm::VideoPlane plane, uint32_t stride) override { m_stride[plane] = stride; }
-  uint32_t Stride(cdm::VideoPlane plane) override { return m_stride[plane]; }
-
-  void SetTimestamp(int64_t timestamp) override { m_pts = timestamp; }
-  int64_t Timestamp() const override { return m_pts; }
-
-  // cdm::VideoFrame_2 specific implementation.
-  // This API is incredibly dumb
-  void SetColorSpace(cdm::ColorSpace color_space) override { color_space_ = color_space; }
-
-  // See ISO 23001-8:2016, section 7. Value 2 means "Unspecified".
-  cdm::ColorSpace color_space_ = {2, 2, 2, cdm::ColorRange::kInvalid};
-
-private:
-  cdm::VideoFormat m_format;
-  cdm::Buffer *m_buffer;
-  cdm::Size m_size;
-
-  uint32_t m_planeOffsets[cdm::kMaxPlanes];
-  uint32_t m_stride[cdm::kMaxPlanes];
-
-  uint64_t m_pts;
-};
-
 namespace media {
 
 uint64_t gtc();
@@ -77,6 +33,8 @@ public:
   virtual void CDMLog(const char *msg) = 0;
   virtual cdm::Buffer *AllocateBuffer(size_t sz) = 0;
 };
+
+class CdmVideoFrame;
 
 class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
   , public cdm::Host_9
@@ -258,6 +216,69 @@ private:
   uint8_t *data_buffer_;
   bool opened_;
 };
+
+/*----------------------------------------------------------------------
+|   CdmDecryptedBlock implementation
++---------------------------------------------------------------------*/
+
+class CdmDecryptedBlock : public cdm::DecryptedBlock {
+public:
+  CdmDecryptedBlock() :buffer_(0), timestamp_(0) {};
+  virtual ~CdmDecryptedBlock() {};
+
+  virtual void SetDecryptedBuffer(cdm::Buffer* buffer) override { buffer_ = buffer; };
+  virtual cdm::Buffer* DecryptedBuffer() override { return buffer_; };
+
+  virtual void SetTimestamp(int64_t timestamp) override { timestamp_ = timestamp; };
+  virtual int64_t Timestamp() const override { return timestamp_; };
+private:
+  cdm::Buffer *buffer_;
+  int64_t timestamp_;
+};
+
+// cdm::VideoFrame and cdm::VideoFrame_2 common implementation.
+// It has a proper implementation in wvdecryptor itself, so don't bother much here
+class CdmVideoFrame :  public cdm::VideoFrame, public cdm::VideoFrame_2
+{
+public:
+  CdmVideoFrame() :m_buffer(0) {};
+
+  void SetFormat(cdm::VideoFormat format) override { m_format = format; }
+  cdm::VideoFormat Format() const override { return m_format; }
+
+  void SetSize(cdm::Size size) override { m_size = size; }
+  cdm::Size Size() const override { return m_size; }
+
+  void SetFrameBuffer(cdm::Buffer* frame_buffer) override { m_buffer = frame_buffer; }
+  cdm::Buffer* FrameBuffer() override { return m_buffer; }
+
+  void SetPlaneOffset(cdm::VideoPlane plane, uint32_t offset) override { m_planeOffsets[plane] = offset; }
+  uint32_t PlaneOffset(cdm::VideoPlane plane) override { return m_planeOffsets[plane]; }
+
+  void SetStride(cdm::VideoPlane plane, uint32_t stride) override { m_stride[plane] = stride; }
+  uint32_t Stride(cdm::VideoPlane plane) override { return m_stride[plane]; }
+
+  void SetTimestamp(int64_t timestamp) override { m_pts = timestamp; }
+  int64_t Timestamp() const override { return m_pts; }
+
+  // cdm::VideoFrame_2 specific implementation.
+  // This API is incredibly dumb
+  void SetColorSpace(cdm::ColorSpace color_space) override { color_space_ = color_space; }
+
+  // See ISO 23001-8:2016, section 7. Value 2 means "Unspecified".
+  cdm::ColorSpace color_space_ = {2, 2, 2, cdm::ColorRange::kInvalid};
+
+private:
+  cdm::VideoFormat m_format;
+  cdm::Buffer *m_buffer;
+  cdm::Size m_size;
+
+  uint32_t m_planeOffsets[cdm::kMaxPlanes];
+  uint32_t m_stride[cdm::kMaxPlanes];
+
+  uint64_t m_pts;
+};
+
 
 
 }  // namespace media
