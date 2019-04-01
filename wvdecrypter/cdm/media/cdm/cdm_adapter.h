@@ -13,6 +13,44 @@
 #include "api/content_decryption_module.h"
 #include "../base/cdm_config.h"
 
+
+// cdm::VideoFrame and cdm::VideoFrame_2 common implementation.
+class VideoFrameImpl : public cdm::VideoFrame, public cdm::VideoFrame_2
+{
+// public:
+//  VideoFrameImpl();
+//  ~VideoFrameImpl() override { if (frame_buffer_) frame_buffer_->Destroy(); }
+//
+//  void SetFormat(cdm::VideoFormat format) final { format_ = format; }
+//  cdm::VideoFormat Format() const final { return format_; }
+//  void SetSize(cdm::Size size) final { size_ = size; }
+//  cdm::Size Size() const final { return size_; }
+//  void SetFrameBuffer(cdm::Buffer* frame_buffer) final { frame_buffer_ = frame_buffer; }
+//  cdm::Buffer* FrameBuffer() final { return frame_buffer_; }
+//  void SetPlaneOffset(cdm::VideoPlane plane, uint32_t offset) final { plane_offsets_[plane] = offset; }
+//  uint32_t PlaneOffset(cdm::VideoPlane plane) final { return plane_offsets_[plane]; }
+//  void SetStride(cdm::VideoPlane plane, uint32_t stride) final { strides_[plane] = stride; }
+//  uint32_t Stride(cdm::VideoPlane plane) final { return strides_[plane]; }
+//  void SetTimestamp(int64_t timestamp) final { timestamp_ = timestamp; }
+//  int64_t Timestamp() const final { return timestamp_; }
+//
+//  // cdm::VideoFrame_2 specific implementation.
+//  void SetColorSpace(cdm::ColorSpace color_space) final { color_space_ = color_space; }
+//
+// private:
+//  // See ISO 23001-8:2016, section 7. Value 2 means "Unspecified".
+//  cdm::ColorSpace color_space_ =  {2, 2, 2, cdm::ColorRange::kInvalid};
+//  cdm::VideoFormat format_ = cdm::kUnknownVideoFormat;
+//  cdm::Size size_;
+//  cdm::Buffer* frame_buffer_ = nullptr;
+//  uint32_t plane_offsets_[cdm::kMaxPlanes]{};
+//  uint32_t strides_[cdm::kMaxPlanes]{};
+//  int64_t timestamp_ = 0;
+//
+// private:
+//  DISALLOW_COPY_AND_ASSIGN(VideoFrameImpl);
+};
+
 namespace media {
 
 uint64_t gtc();
@@ -35,9 +73,9 @@ public:
 };
 
 class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
-  , public cdm::Host_8
   , public cdm::Host_9
   , public cdm::Host_10
+  , public cdm::Host_11
 {
  public:
 	CdmAdapter(const std::string& key_system,
@@ -79,23 +117,23 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
 
 	void TimerExpired(void* context);
 
-	cdm::Status Decrypt(const cdm::InputBuffer& encrypted_buffer,
+	cdm::Status Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
 		cdm::DecryptedBlock* decrypted_buffer);
 
   cdm::Status InitializeAudioDecoder(
-		const cdm::AudioDecoderConfig& audio_decoder_config);
+		const cdm::AudioDecoderConfig_2& audio_decoder_config);
 
 	cdm::Status InitializeVideoDecoder(
-		const cdm::VideoDecoderConfig& video_decoder_config);
+		const cdm::VideoDecoderConfig_3& video_decoder_config);
 
 	void DeinitializeDecoder(cdm::StreamType decoder_type);
 
 	void ResetDecoder(cdm::StreamType decoder_type);
 
-	cdm::Status DecryptAndDecodeFrame(const cdm::InputBuffer& encrypted_buffer,
-		cdm::VideoFrame* video_frame);
+	cdm::Status DecryptAndDecodeFrame(const cdm::InputBuffer_2& encrypted_buffer,
+		VideoFrameImpl* video_frame);
 
-	cdm::Status DecryptAndDecodeSamples(const cdm::InputBuffer& encrypted_buffer,
+	cdm::Status DecryptAndDecodeSamples(const cdm::InputBuffer_2& encrypted_buffer,
 		cdm::AudioFrames* audio_frames);
 
 	void OnPlatformChallengeResponse(
@@ -122,14 +160,8 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
 
 	void OnResolvePromise(uint32_t promise_id) override;
 
-  void OnRejectPromise(uint32_t promise_id,
-    cdm::Exception exception,
-    uint32_t system_code,
-    const char* error_message,
-    uint32_t error_message_size) override;
-
 	void OnRejectPromise(uint32_t promise_id,
-    cdm::Error error,
+    cdm::Exception error,
     uint32_t system_code,
     const char* error_message,
     uint32_t error_message_size)override;
@@ -139,14 +171,6 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
     cdm::MessageType message_type,
     const char* message,
     uint32_t message_size) override;
-
-	void OnSessionMessage(const char* session_id,
-    uint32_t session_id_size,
-    cdm::MessageType message_type,
-    const char* message,
-    uint32_t message_size,
-    const char* legacy_destination_url,
-    uint32_t legacy_destination_url_size)override;
 
 	void OnSessionKeysChange(const char* session_id,
     uint32_t session_id_size,
@@ -160,13 +184,6 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
 
 	void OnSessionClosed(const char* session_id,
     uint32_t session_id_size) override;
-
-	void OnLegacySessionError(const char* session_id,
-    uint32_t session_id_size,
-    cdm::Error error,
-    uint32_t system_code,
-    const char* error_message,
-    uint32_t error_message_size)override;
 
 	void SendPlatformChallenge(const char* service_id,
     uint32_t service_id_size,
@@ -184,7 +201,11 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
 
 	void RequestStorageId(uint32_t version) override;
 
+    // Host_10 specific
   void OnInitialized(bool success) override;
+
+  // Host_11 specific
+  cdm::CdmProxy* RequestCdmProxy(cdm::CdmProxyClient* client) override;
 
 
 public: //Misc
@@ -207,9 +228,9 @@ private:
   cdm::MessageType message_type_;
   cdm::Buffer *active_buffer_;
 
-  cdm::ContentDecryptionModule_8 *cdm8_;
   cdm::ContentDecryptionModule_9 *cdm9_;
   cdm::ContentDecryptionModule_10 *cdm10_;
+  cdm::ContentDecryptionModule_11 *cdm11_;
 
   DISALLOW_COPY_AND_ASSIGN(CdmAdapter);
 };
