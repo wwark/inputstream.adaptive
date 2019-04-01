@@ -313,17 +313,6 @@ static bool IsEncryptionSchemeSupportedByLegacyCdms(
          scheme == cdm::EncryptionScheme::kCenc;
 }
 
-static cdm::InputBuffer_1 convertInputBuffer2To1(const cdm::InputBuffer_2 &v2)
-{
-    return {
-        v2.data, v2.data_size,
-        v2.key_id, v2.key_id_size,
-        v2.iv, v2.iv_size,
-        v2.subsamples, v2.num_subsamples,
-        v2.timestamp
-    };
-}
-
 cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   cdm::DecryptedBlock* decrypted_buffer)
 {
@@ -339,7 +328,7 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   cdm::Status ret;
 
   if (cdm9_)
-      ret = cdm9_->Decrypt(convertInputBuffer2To1(encrypted_buffer), decrypted_buffer);
+      ret = cdm9_->Decrypt(encrypted_buffer, decrypted_buffer);
   else if (cdm10_)
     ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer);
   else if (cdm11_)
@@ -430,7 +419,7 @@ cdm::Status CdmAdapter::DecryptAndDecodeFrame(const cdm::InputBuffer_2& encrypte
   cdm::Status ret(cdm::kDeferredInitialization);
 
   if (cdm9_)
-    ret = cdm9_->DecryptAndDecodeFrame(convertInputBuffer2To1(encrypted_buffer), video_frame);
+    ret = cdm9_->DecryptAndDecodeFrame(encrypted_buffer, video_frame);
   else if (cdm10_)
     ret = cdm10_->DecryptAndDecodeFrame(encrypted_buffer, video_frame);
   else if (cdm11_)
@@ -445,7 +434,7 @@ cdm::Status CdmAdapter::DecryptAndDecodeSamples(const cdm::InputBuffer_2& encryp
 {
   std::lock_guard<std::mutex> lock(decrypt_mutex_);
   if (cdm9_)
-    return cdm9_->DecryptAndDecodeSamples(convertInputBuffer2To1(encrypted_buffer), audio_frames);
+    return cdm9_->DecryptAndDecodeSamples(encrypted_buffer, audio_frames);
   else if (cdm10_)
     return cdm10_->DecryptAndDecodeSamples(encrypted_buffer, audio_frames);
   else if (cdm11_)

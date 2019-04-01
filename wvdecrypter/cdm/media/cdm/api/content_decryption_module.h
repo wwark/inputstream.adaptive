@@ -185,6 +185,7 @@ struct InputBuffer_1 {
   uint32_t num_subsamples;  // Number of subsamples in |subsamples|.
 
   int64_t timestamp;  // Presentation timestamp in microseconds.
+
 };
 CHECK_TYPE(InputBuffer_1, 40, 72);
 
@@ -216,6 +217,16 @@ struct InputBuffer_2 {
   Pattern pattern;
 
   int64_t timestamp;  // Presentation timestamp in microseconds.
+
+  operator InputBuffer_1() const {
+      return {
+        data, data_size,
+        key_id, key_id_size,
+        iv, iv_size,
+        subsamples, num_subsamples,
+        timestamp
+    };
+  }
 };
 CHECK_TYPE(InputBuffer_2, 64, 80);
 
