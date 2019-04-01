@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "cdm_adapter.h"
+#include "../../../../src/md5.h"
 #include <chrono>
 #include <thread>
 
@@ -596,25 +597,41 @@ CdmFileIoImpl::CdmFileIoImpl(std::string base_path, cdm::FileIOClient* client)
 
 void CdmFileIoImpl::Open(const char* file_name, uint32_t file_name_size)
 {
-  if (!opened_)
-  {
-  opened_ = true;
-  base_path_ += std::string(file_name, file_name_size);
-  client_->OnOpenComplete(cdm::FileIOClient::kSuccess);
-  }
-  else
-  client_->OnOpenComplete(cdm::FileIOClient::kInUse);
+    if (opened_) {
+        client_->OnOpenComplete(cdm::FileIOClient::kInUse);
+        return;
+    }
+
+    // To avoid it traversing the file system, don't let it specify the
+    // filename/path directly
+    MD5 hasher(std::string(file_name, file_name_size));
+
+    opened_ = true;
+    base_path_ += "widevine-data-" + hasher.hexdigest();
+
+    file_descriptor_ = fopen(base_path_.c_str(), "w+b");
+    if (file_descriptor_) {
+        client_->OnOpenComplete(cdm::FileIOClient::kSuccess);
+    } else {
+        client_->OnOpenComplete(cdm::FileIOClient::kError);
+    }
+
+    client_->OnOpenComplete(cdm::FileIOClient::kSuccess);
 }
 
 void CdmFileIoImpl::Read()
 {
+
   cdm::FileIOClient::Status status(cdm::FileIOClient::kError);
   size_t sz(0);
 
   free(reinterpret_cast<void*>(data_buffer_));
   data_buffer_ = nullptr;
 
-  file_descriptor_ = fopen(base_path_.c_str(), "rb");
+  if (!opened_) {
+      client_->OnReadComplete(status, data_buffer_, sz);
+      return;
+  }
 
   if (file_descriptor_)
   {
@@ -635,7 +652,11 @@ void CdmFileIoImpl::Read()
 void CdmFileIoImpl::Write(const uint8_t* data, uint32_t data_size)
 {
   cdm::FileIOClient::Status status(cdm::FileIOClient::kError);
-  file_descriptor_ = fopen(base_path_.c_str(), "wb");
+
+  if (!opened_) {
+      client_->OnWriteComplete(status);
+      return;
+  }
 
   if (file_descriptor_)
   {
