@@ -60,28 +60,6 @@ static void* GetCdmHost(int host_interface_version, void* user_data)
   }
 }
 
-static cdm::InputBuffer_1 convertInputBuffer2To1(const cdm::InputBuffer_2 &v2)
-{
-    cdm::InputBuffer_1 v1;
-
-    v1.data = v2.data;
-    v1.data_size = v2.data_size;
-
-    v1.key_id = v2.key_id;
-    v1.key_id_size = v2.key_id_size;
-
-    v1.iv = v2.iv;
-    v1.iv_size = v2.iv_size;
-
-    v1.subsamples = v2.subsamples;
-    v1.num_subsamples = v2.num_subsamples;
-
-    v1.timestamp = v2.timestamp;
-
-    return v1;
-}
-
-
 // Returns a pointer to the requested CDM upon success.
 // Returns NULL if an error occurs or the requested |cdm_interface_version| or
 // |key_system| is not supported or another error occurs.
@@ -335,6 +313,16 @@ static bool IsEncryptionSchemeSupportedByLegacyCdms(
          scheme == cdm::EncryptionScheme::kCenc;
 }
 
+static cdm::InputBuffer_1 convertInputBuffer2To1(const cdm::InputBuffer_2 &v2)
+{
+    return {
+        v2.data, v2.data_size,
+        v2.key_id, v2.key_id_size,
+        v2.iv, v2.iv_size,
+        v2.subsamples, v2.num_subsamples,
+        v2.timestamp
+    };
+}
 
 cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   cdm::DecryptedBlock* decrypted_buffer)
@@ -351,7 +339,7 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   cdm::Status ret;
 
   if (cdm9_)
-    ret = cdm9_->Decrypt(convertInputBuffer2To1(encrypted_buffer), decrypted_buffer);
+      ret = cdm9_->Decrypt(convertInputBuffer2To1(encrypted_buffer), decrypted_buffer);
   else if (cdm10_)
     ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer);
   else if (cdm11_)
@@ -361,16 +349,6 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   return ret;
 }
 
-static cdm::AudioDecoderConfig_1 ToAudioDecoderConfig_1(
-    const cdm::AudioDecoderConfig_2& config) {
-  return {config.codec,
-          config.channel_count,
-          config.bits_per_channel,
-          config.samples_per_second,
-          config.extra_data,
-          config.extra_data_size};
-}
-
 cdm::Status CdmAdapter::InitializeAudioDecoder(
   const cdm::AudioDecoderConfig_2& audio_decoder_config)
 {
@@ -378,29 +356,20 @@ cdm::Status CdmAdapter::InitializeAudioDecoder(
       if (!IsEncryptionSchemeSupportedByLegacyCdms(
                   audio_decoder_config.encryption_scheme))
           return cdm::kInitializationError;
-      return cdm9_->InitializeAudioDecoder(ToAudioDecoderConfig_1(audio_decoder_config));
+
+      return cdm9_->InitializeAudioDecoder({
+              audio_decoder_config.codec,
+              audio_decoder_config.channel_count,
+              audio_decoder_config.bits_per_channel,
+              audio_decoder_config.samples_per_second,
+              audio_decoder_config.extra_data,
+              audio_decoder_config.extra_data_size
+              });
   } else if (cdm10_)
     return cdm10_->InitializeAudioDecoder(audio_decoder_config);
   else if (cdm11_)
     return cdm11_->InitializeAudioDecoder(audio_decoder_config);
   return cdm::kDeferredInitialization;
-}
-
-static cdm::VideoDecoderConfig_1 ToVideoDecoderConfig_1(
-    const cdm::VideoDecoderConfig_3& config) {
-  return {config.codec,      config.profile,    config.format,
-          config.coded_size, config.extra_data, config.extra_data_size};
-}
-
-cdm::VideoDecoderConfig_2 ToVideoDecoderConfig_2(
-    const cdm::VideoDecoderConfig_3& config) {
-  return {config.codec,
-          config.profile,
-          config.format,
-          config.coded_size,
-          config.extra_data,
-          config.extra_data_size,
-          config.encryption_scheme};
 }
 
 cdm::Status CdmAdapter::InitializeVideoDecoder(
@@ -410,9 +379,25 @@ cdm::Status CdmAdapter::InitializeVideoDecoder(
       if (!IsEncryptionSchemeSupportedByLegacyCdms(
                   video_decoder_config.encryption_scheme))
           return cdm::kInitializationError;
-      return cdm9_->InitializeVideoDecoder(ToVideoDecoderConfig_1(video_decoder_config));
+
+      return cdm9_->InitializeVideoDecoder({
+              video_decoder_config.codec,
+              video_decoder_config.profile,
+              video_decoder_config.format,
+              video_decoder_config.coded_size,
+              video_decoder_config.extra_data,
+              video_decoder_config.extra_data_size
+              });
   } else if (cdm10_)
-    return cdm10_->InitializeVideoDecoder(ToVideoDecoderConfig_2(video_decoder_config));
+      return cdm10_->InitializeVideoDecoder({
+              video_decoder_config.codec,
+              video_decoder_config.profile,
+              video_decoder_config.format,
+              video_decoder_config.coded_size,
+              video_decoder_config.extra_data,
+              video_decoder_config.extra_data_size,
+              video_decoder_config.encryption_scheme
+              });
   else if (cdm11_)
     return cdm11_->InitializeVideoDecoder(video_decoder_config);
   return cdm::kDeferredInitialization;
