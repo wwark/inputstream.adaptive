@@ -158,88 +158,6 @@ private:
   void *instance_;
 };
 
-class CdmVideoFrame : public VideoFrameImpl {
-public:
-  CdmVideoFrame() :m_buffer(0) {};
-
-  virtual void SetFormat(cdm::VideoFormat format) override
-  {
-    m_format = format;
-  }
-
-  virtual cdm::VideoFormat Format() const override
-  {
-    return m_format;
-  }
-
-  virtual void SetSize(cdm::Size size) override
-  {
-    m_size = size;
-  }
-
-  virtual cdm::Size Size() const override
-  {
-    return m_size;
-  }
-
-  virtual void SetFrameBuffer(cdm::Buffer* frame_buffer) override
-  {
-    m_buffer = frame_buffer;
-  }
-
-  virtual cdm::Buffer* FrameBuffer() override
-  {
-    return m_buffer;
-  }
-
-  virtual void SetPlaneOffset(cdm::VideoPlane plane, uint32_t offset) override
-  {
-    m_planeOffsets[plane] = offset;
-  }
-
-  virtual uint32_t PlaneOffset(cdm::VideoPlane plane) override
-  {
-    return m_planeOffsets[plane];
-  }
-
-  virtual void SetStride(cdm::VideoPlane plane, uint32_t stride) override
-  {
-    m_stride[plane] = stride;
-  }
-
-  virtual uint32_t Stride(cdm::VideoPlane plane) override
-  {
-    return m_stride[plane];
-  }
-
-  virtual void SetTimestamp(int64_t timestamp) override
-  {
-    m_pts = timestamp;
-  }
-
-  virtual int64_t Timestamp() const override
-  {
-    return m_pts;
-  }
-
-  // cdm::VideoFrame_2 specific implementation.
-  void SetColorSpace(cdm::ColorSpace color_space) final
-  {
-      color_space_ = color_space;
-  }
-private:
-  // See ISO 23001-8:2016, section 7. Value 2 means "Unspecified".
-  cdm::ColorSpace color_space_ =  {2, 2, 2, cdm::ColorRange::kInvalid};
-  cdm::VideoFormat m_format;
-  cdm::Buffer *m_buffer;
-  cdm::Size m_size;
-
-  uint32_t m_planeOffsets[cdm::kMaxPlanes];
-  uint32_t m_stride[cdm::kMaxPlanes];
-
-  uint64_t m_pts;
-};
-
 /*----------------------------------------------------------------------
 |   WV_CencSingleSampleDecrypter
 +---------------------------------------------------------------------*/
@@ -369,7 +287,7 @@ public:
   media::CdmAdapter *GetCdmAdapter() { return wv_adapter.get(); };
   const std::string &GetLicenseURL() { return license_url_; };
 
-  cdm::Status DecryptAndDecodeFrame(void* hostInstance, cdm::InputBuffer_2 &cdm_in, VideoFrameImpl *frame)
+  cdm::Status DecryptAndDecodeFrame(void* hostInstance, cdm::InputBuffer_2 &cdm_in, CdmVideoFrame *frame)
   {
     host_instance_ = hostInstance;
     cdm::Status ret = wv_adapter->DecryptAndDecodeFrame(cdm_in, frame);

@@ -16,8 +16,46 @@
 
 // cdm::VideoFrame and cdm::VideoFrame_2 common implementation.
 // It has a proper implementation in wvdecryptor itself, so don't bother much here
-class VideoFrameImpl : public cdm::VideoFrame, public cdm::VideoFrame_2
-{ };
+class CdmVideoFrame :  public cdm::VideoFrame, public cdm::VideoFrame_2
+{
+public:
+  CdmVideoFrame() :m_buffer(0) {};
+
+  void SetFormat(cdm::VideoFormat format) override { m_format = format; }
+  cdm::VideoFormat Format() const override { return m_format; }
+
+  void SetSize(cdm::Size size) override { m_size = size; }
+  cdm::Size Size() const override { return m_size; }
+
+  void SetFrameBuffer(cdm::Buffer* frame_buffer) override { m_buffer = frame_buffer; }
+  cdm::Buffer* FrameBuffer() override { return m_buffer; }
+
+  void SetPlaneOffset(cdm::VideoPlane plane, uint32_t offset) override { m_planeOffsets[plane] = offset; }
+  uint32_t PlaneOffset(cdm::VideoPlane plane) override { return m_planeOffsets[plane]; }
+
+  void SetStride(cdm::VideoPlane plane, uint32_t stride) override { m_stride[plane] = stride; }
+  uint32_t Stride(cdm::VideoPlane plane) override { return m_stride[plane]; }
+
+  void SetTimestamp(int64_t timestamp) override { m_pts = timestamp; }
+  int64_t Timestamp() const override { return m_pts; }
+
+  // cdm::VideoFrame_2 specific implementation.
+  // This API is incredibly dumb
+  void SetColorSpace(cdm::ColorSpace color_space) override { color_space_ = color_space; }
+
+  // See ISO 23001-8:2016, section 7. Value 2 means "Unspecified".
+  cdm::ColorSpace color_space_ = {2, 2, 2, cdm::ColorRange::kInvalid};
+
+private:
+  cdm::VideoFormat m_format;
+  cdm::Buffer *m_buffer;
+  cdm::Size m_size;
+
+  uint32_t m_planeOffsets[cdm::kMaxPlanes];
+  uint32_t m_stride[cdm::kMaxPlanes];
+
+  uint64_t m_pts;
+};
 
 namespace media {
 
@@ -99,7 +137,7 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
 	void ResetDecoder(cdm::StreamType decoder_type);
 
 	cdm::Status DecryptAndDecodeFrame(const cdm::InputBuffer_2& encrypted_buffer,
-		VideoFrameImpl* video_frame);
+		CdmVideoFrame* video_frame);
 
 	cdm::Status DecryptAndDecodeSamples(const cdm::InputBuffer_2& encrypted_buffer,
 		cdm::AudioFrames* audio_frames);

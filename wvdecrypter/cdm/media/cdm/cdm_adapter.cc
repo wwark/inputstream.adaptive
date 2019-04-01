@@ -413,7 +413,7 @@ void CdmAdapter::ResetDecoder(cdm::StreamType decoder_type)
 }
 
 cdm::Status CdmAdapter::DecryptAndDecodeFrame(const cdm::InputBuffer_2& encrypted_buffer,
-  VideoFrameImpl* video_frame)
+  CdmVideoFrame* video_frame)
 {
   std::lock_guard<std::mutex> lock(decrypt_mutex_);
   cdm::Status ret(cdm::kDeferredInitialization);
