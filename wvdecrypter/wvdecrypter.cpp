@@ -73,31 +73,19 @@ private:
 };
 
 /*----------------------------------------------------------------------
-|   CdmDecryptedBlock implementation
+|   CmdBuffer implementation
 +---------------------------------------------------------------------*/
 class CdmBuffer : public cdm::Buffer {
 public:
   CdmBuffer(AP4_DataBuffer *buffer) :buffer_(buffer) {};
-  virtual ~CdmBuffer() {};
+  virtual ~CdmBuffer() {}
+  void Destroy() override {};
 
-  virtual void Destroy() override {};
+  uint32_t Capacity() const override { return buffer_->GetBufferSize(); };
+  uint8_t* Data() override { return (uint8_t*)buffer_->GetData(); };
+  void SetSize(uint32_t size) override { buffer_->SetDataSize(size); };
+  uint32_t Size() const override { return buffer_->GetDataSize(); };
 
-  virtual uint32_t Capacity() const override
-  {
-    return buffer_->GetBufferSize();
-  };
-  virtual uint8_t* Data() override
-  {
-    return (uint8_t*)buffer_->GetData();
-  };
-  virtual void SetSize(uint32_t size) override
-  {
-    buffer_->SetDataSize(size);
-  };
-  virtual uint32_t Size() const override
-  {
-    return buffer_->GetDataSize();
-  };
 private:
   AP4_DataBuffer *buffer_;
 };
@@ -108,48 +96,29 @@ private:
 
 class CdmFixedBuffer : public cdm::Buffer {
 public:
-  CdmFixedBuffer() : data_(nullptr), dataSize_(0), capacity_(0), buffer_(nullptr), instance_(nullptr) {};
+  CdmFixedBuffer(void *instance, uint8_t* data, size_t dataSize, void *buffer) :
+      data_(data),
+      dataSize_(0),
+      capacity_(dataSize),
+      buffer_(buffer),
+      instance_(instance)
+    { };
+
   virtual ~CdmFixedBuffer() {};
 
-  virtual void Destroy() override
+  void Destroy() override
   {
     host->ReleaseBuffer(instance_, buffer_);
     delete this;
   };
 
-  virtual uint32_t Capacity() const override
-  {
-    return capacity_;
-  };
+  uint32_t Capacity() const override { return capacity_; };
+  void SetSize(uint32_t size) override { dataSize_ = size; };
+  uint32_t Size() const override { return dataSize_; };
+  uint8_t* Data() override { return data_; };
 
-  virtual uint8_t* Data() override
-  {
-    return data_;
-  };
-
-  virtual void SetSize(uint32_t size) override
-  {
-    dataSize_ = size;
-  };
-
-  virtual uint32_t Size() const override
-  {
-    return dataSize_;
-  };
-
-  void initialize(void *instance, uint8_t* data, size_t dataSize, void *buffer)
-  {
-    instance_ = instance;
-    data_ = data;
-    dataSize_ = 0;
-    capacity_ = dataSize;
-    buffer_ = buffer;
-  }
-
-  void *Buffer() const
-  {
-    return buffer_;
-  };
+  // Not override
+  void *Buffer() const { return buffer_; };
 
 private:
   uint8_t *data_;
@@ -269,9 +238,7 @@ public:
     pic.decodedDataSize = sz;
     if (host->GetBuffer(host_instance_, pic))
     {
-      CdmFixedBuffer *buf = new CdmFixedBuffer;
-      buf->initialize(host_instance_, pic.decodedData, pic.decodedDataSize, pic.buffer);
-      return buf;
+      return new CdmFixedBuffer(host_instance_, pic.decodedData, pic.decodedDataSize, pic.buffer);
     }
     return nullptr;
   };
