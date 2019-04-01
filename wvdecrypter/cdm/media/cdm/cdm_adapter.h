@@ -15,41 +15,9 @@
 
 
 // cdm::VideoFrame and cdm::VideoFrame_2 common implementation.
+// It has a proper implementation in wvdecryptor itself, so don't bother much here
 class VideoFrameImpl : public cdm::VideoFrame, public cdm::VideoFrame_2
-{
-// public:
-//  VideoFrameImpl();
-//  ~VideoFrameImpl() override { if (frame_buffer_) frame_buffer_->Destroy(); }
-//
-//  void SetFormat(cdm::VideoFormat format) final { format_ = format; }
-//  cdm::VideoFormat Format() const final { return format_; }
-//  void SetSize(cdm::Size size) final { size_ = size; }
-//  cdm::Size Size() const final { return size_; }
-//  void SetFrameBuffer(cdm::Buffer* frame_buffer) final { frame_buffer_ = frame_buffer; }
-//  cdm::Buffer* FrameBuffer() final { return frame_buffer_; }
-//  void SetPlaneOffset(cdm::VideoPlane plane, uint32_t offset) final { plane_offsets_[plane] = offset; }
-//  uint32_t PlaneOffset(cdm::VideoPlane plane) final { return plane_offsets_[plane]; }
-//  void SetStride(cdm::VideoPlane plane, uint32_t stride) final { strides_[plane] = stride; }
-//  uint32_t Stride(cdm::VideoPlane plane) final { return strides_[plane]; }
-//  void SetTimestamp(int64_t timestamp) final { timestamp_ = timestamp; }
-//  int64_t Timestamp() const final { return timestamp_; }
-//
-//  // cdm::VideoFrame_2 specific implementation.
-//  void SetColorSpace(cdm::ColorSpace color_space) final { color_space_ = color_space; }
-//
-// private:
-//  // See ISO 23001-8:2016, section 7. Value 2 means "Unspecified".
-//  cdm::ColorSpace color_space_ =  {2, 2, 2, cdm::ColorRange::kInvalid};
-//  cdm::VideoFormat format_ = cdm::kUnknownVideoFormat;
-//  cdm::Size size_;
-//  cdm::Buffer* frame_buffer_ = nullptr;
-//  uint32_t plane_offsets_[cdm::kMaxPlanes]{};
-//  uint32_t strides_[cdm::kMaxPlanes]{};
-//  int64_t timestamp_ = 0;
-//
-// private:
-//  DISALLOW_COPY_AND_ASSIGN(VideoFrameImpl);
-};
+{ };
 
 namespace media {
 
