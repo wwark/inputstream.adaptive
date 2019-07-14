@@ -20,6 +20,7 @@
 #include "../src/helpers.h"
 #include "../src/SSD_dll.h"
 #include "../src/md5.h"
+#include "expat.h"
 #include "jsmn.h"
 #include "Ap4.h"
 
@@ -583,6 +584,37 @@ void WV_CencSingleSampleDecrypter::CheckLicenseRenewal()
   SendSessionMessage();
 }
 
+#define BUFFER_SIZE 100000
+
+static char content_buffer_xml[2048];
+static size_t offs;
+static bool overflow;
+static bool has_licence;
+char *licence_value;
+
+void start_element(void *data, const char *element, const char **attribute) {
+    /* Nothing TODO */
+}
+
+void end_element(void *data, const char *el) {
+    if ( strcmp("license", el) == 0 ) {
+        licence_value = content_buffer_xml;
+        has_licence = true;
+    }
+}
+
+// pastes parts of the node together
+void char_data (void *content, const XML_Char *s, int len) {
+    if (!overflow) {
+        if (len + offs >= sizeof(content_buffer_xml) ) {
+            overflow = true;
+        } else {
+            memcpy(content_buffer_xml + offs, s, len);
+            offs += len;
+        }
+    }
+}
+
 bool WV_CencSingleSampleDecrypter::SendSessionMessage()
 {
   std::vector<std::string> headers, header, blocks = split(drm_.GetLicenseURL(), '|');
@@ -867,6 +899,51 @@ bool WV_CencSingleSampleDecrypter::SendSessionMessage()
       else
       {
         Log(SSD_HOST::LL_ERROR, "Unable to find %s in JSON string", blocks[3].c_str() + 2);
+        goto SSMFAIL;
+      }
+    }
+    if (blocks[3][0] == 'X' || (blocks[3].size() > 1 && blocks[3][0] == 'B' && blocks[3][1] == 'X'))
+    {
+      int dataPos = 2;
+
+      if (response.size() >= 3 && blocks[3][0] == 'B')
+      {
+        unsigned int decoded_size = 2048;
+        uint8_t decoded[2048];
+        b64_decode(response.c_str(), response.size(), decoded, decoded_size);
+        response = std::string(reinterpret_cast<const char*>(decoded), decoded_size);
+        dataPos = 3;
+      }
+
+      has_licence = false;
+
+      //parse xml and get license datas
+      XML_Parser parser = XML_ParserCreate(NULL);
+
+      XML_SetElementHandler(parser, start_element, end_element);
+      XML_SetCharacterDataHandler(parser, char_data);
+
+      if (XML_Parse(parser, response.c_str(), strlen(response.c_str()), XML_TRUE) == XML_STATUS_ERROR)
+          Log(SSD_HOST::LL_ERROR, "Error: %s\n", XML_ErrorString(XML_GetErrorCode(parser)));
+
+      XML_ParserFree(parser);
+
+      if (!has_licence)
+      {
+        if (blocks[3][dataPos - 1] == 'B')
+        {
+          unsigned int decoded_size = 2048;
+          uint8_t decoded[2048];
+          b64_decode(licence_value, strlen(licence_value), decoded, decoded_size);
+          drm_.GetCdmAdapter()->UpdateSession(++promise_id_, session_.data(), session_.size(), reinterpret_cast<const uint8_t*>(decoded), decoded_size);
+        }
+        else
+          drm_.GetCdmAdapter()->UpdateSession(++promise_id_, session_.data(), session_.size(),
+            reinterpret_cast<const uint8_t*>(licence_value), strlen(licence_value));
+        }
+      else
+      {
+        Log(SSD_HOST::LL_ERROR, "Unable to find %s in XML string", blocks[3].c_str() + 2);
         goto SSMFAIL;
       }
     }
